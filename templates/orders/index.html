@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block page_title %}Order Management & Fulfillment{% endblock %}
+
+{% block content %}
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('orders.index') }}" class="filter-group" style="flex: 1;">
+        <div class="search-input-wrapper">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" name="search" class="form-control" placeholder="Search order #, customer..." value="{{ search }}">
+        </div>
+
+        <select name="status" class="form-select" style="width: auto;">
+            <option value="">All Statuses</option>
+            <option value="Pending" {{ 'selected' if status == 'Pending' else '' }}>Pending</option>
+            <option value="Confirmed" {{ 'selected' if status == 'Confirmed' else '' }}>Confirmed</option>
+            <option value="Shipped" {{ 'selected' if status == 'Shipped' else '' }}>Shipped</option>
+            <option value="Delivered" {{ 'selected' if status == 'Delivered' else '' }}>Delivered</option>
+            <option value="Cancelled" {{ 'selected' if status == 'Cancelled' else '' }}>Cancelled</option>
+        </select>
+
+        <select name="payment_status" class="form-select" style="width: auto;">
+            <option value="">All Payments</option>
+            <option value="Paid" {{ 'selected' if payment_status == 'Paid' else '' }}>Paid</option>
+            <option value="Unpaid" {{ 'selected' if payment_status == 'Unpaid' else '' }}>Unpaid</option>
+            <option value="Refunded" {{ 'selected' if payment_status == 'Refunded' else '' }}>Refunded</option>
+        </select>
+
+        <input type="date" name="start_date" class="form-control" style="width: auto;" value="{{ start_date or '' }}" title="From Date">
+        <input type="date" name="end_date" class="form-control" style="width: auto;" value="{{ end_date or '' }}" title="To Date">
+
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or status or payment_status or start_date or end_date %}
+        <a href="{{ url_for('orders.index') }}" class="btn btn-secondary">Clear</a>
+        {% endif %}
+    </form>
+
+    <div>
+        <a href="{{ url_for('orders.new') }}" class="btn btn-primary">
+            <i class="fa-solid fa-cart-plus"></i>
+            <span>Create New Order</span>
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Date & Time</th>
+                    <th>Customer Name</th>
+                    <th>Items</th>
+                    <th>Payment</th>
+                    <th>Status</th>
+                    <th>Total Revenue</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in orders %}
+                <tr>
+                    <td>
+                        <strong><a href="{{ url_for('orders.details', order_id=o.id) }}">{{ o.order_number }}</a></strong>
+                    </td>
+                    <td>{{ o.order_date | datetime_format }}</td>
+                    <td>
+                        <div style="font-weight: 600;">{{ o.customer_name }}</div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">{{ o.customer_email }}</span>
+                    </td>
+                    <td>{{ o.item_count }} item(s)</td>
+                    <td>
+                        <span class="badge {{ 'badge-success' if o.payment_status == 'Paid' else 'badge-danger' if o.payment_status == 'Refunded' else 'badge-warning' }}">
+                            {{ o.payment_status }}
+                        </span>
+                        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">{{ o.payment_method }}</div>
+                    </td>
+                    <td>
+                        <span class="badge {{ 'badge-success' if o.status == 'Delivered' else 'badge-info' if o.status in ('Confirmed', 'Shipped') else 'badge-danger' if o.status == 'Cancelled' else 'badge-warning' }}">
+                            {{ o.status }}
+                        </span>
+                    </td>
+                    <td><strong>{{ o.total_amount | currency }}</strong></td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('orders.details', order_id=o.id) }}" class="btn btn-sm btn-secondary" title="View Order">
+                            <i class="fa-regular fa-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-receipt"></i>
+                            <h3>No Orders Found</h3>
+                            <p>No orders match the selected search or filter criteria.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.total_pages > 1 %}
+    <div class="pagination-wrapper">
+        <div>
+            Showing page {{ pagination.page }} of {{ pagination.total_pages }} ({{ pagination.total_count }} total orders)
+        </div>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('orders.index', page=pagination.page-1, search=search, status=status, payment_status=payment_status, start_date=start_date, end_date=end_date) }}" class="btn btn-sm btn-secondary">
+                &larr; Previous
+            </a>
+            {% endif %}
+            <span style="padding: 0 0.5rem; font-weight: 600;">{{ pagination.page }}</span>
+            {% if pagination.has_next %}
+            <a href="{{ url_for('orders.index', page=pagination.page+1, search=search, status=status, payment_status=payment_status, start_date=start_date, end_date=end_date) }}" class="btn btn-sm btn-secondary">
+                Next &rarr;
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

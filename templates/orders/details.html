@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block page_title %}Order Invoice: {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<!-- Top Header Banner -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+                <h2 style="font-size: 1.4rem; font-weight: 800;">{{ order.order_number }}</h2>
+                <span class="badge {{ 'badge-success' if order.status == 'Delivered' else 'badge-info' if order.status in ('Confirmed', 'Shipped') else 'badge-danger' if order.status == 'Cancelled' else 'badge-warning' }}" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+                    {{ order.status }}
+                </span>
+                <span class="badge {{ 'badge-success' if order.payment_status == 'Paid' else 'badge-danger' if order.payment_status == 'Refunded' else 'badge-warning' }}" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+                    {{ order.payment_status }}
+                </span>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                Placed on: <strong>{{ order.order_date | datetime_format }}</strong>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="{{ url_for('orders.index') }}" class="btn btn-secondary">
+                &larr; Back to Orders
+            </a>
+            <button onclick="window.print()" class="btn btn-secondary">
+                <i class="fa-solid fa-print"></i> Print Invoice
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="charts-grid">
+    <!-- Customer & Payment Details -->
+    <div class="card chart-card-col-4">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-user"></i> Customer & Shipping</h3>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.9rem;">
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Customer Name:</span>
+                <div style="font-weight: 700;">
+                    <a href="{{ url_for('customers.details', customer_id=order.customer_id) }}">{{ order.customer_name }}</a>
+                </div>
+            </div>
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Contact:</span>
+                <div>{{ order.customer_email }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">{{ order.customer_phone or 'No phone provided' }}</div>
+            </div>
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Shipping Address:</span>
+                <div>{{ order.customer_address or 'Not specified' }}</div>
+                <div>{{ order.customer_city }}, {{ order.customer_state or '' }} {{ order.customer_postal_code or '' }}</div>
+            </div>
+            {% if order.notes %}
+            <div style="background-color: var(--border-subtle); padding: 0.75rem; border-radius: var(--radius-sm); margin-top: 0.5rem;">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Order Notes:</span>
+                <div style="font-style: italic; font-size: 0.85rem;">"{{ order.notes }}"</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Payment Info Sub-card -->
+        <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+            <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.75rem;">
+                <i class="fa-regular fa-credit-card"></i> Payment Details
+            </h4>
+            {% if order.payment %}
+            <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                <div>Method: <strong>{{ order.payment.payment_method }}</strong></div>
+                <div>Transaction ID: <code>{{ order.payment.transaction_id or 'COD / Pending' }}</code></div>
+                <div>Status: <span class="badge {{ 'badge-success' if order.payment.status == 'Success' else 'badge-warning' }}">{{ order.payment.status }}</span></div>
+            </div>
+            {% else %}
+            <span style="font-size: 0.85rem; color: var(--text-muted);">No payment record attached.</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Line Items & Financial Summary -->
+    <div class="card chart-card-col-8">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-list-check"></i> Order Line Items ({{ order['items'] | length }})</h3>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Product Details</th>
+                        <th>Snapshotted Price</th>
+                        <th>Quantity</th>
+                        <th>Line Total</th>
+                        <th>Historical Margin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order['items'] %}
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <img src="{{ item.image_url or 'https://via.placeholder.com/40' }}" 
+                                     alt="" 
+                                     style="width: 38px; height: 38px; border-radius: var(--radius-sm); object-fit: cover;"
+                                     onerror="this.src='https://via.placeholder.com/38';">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.88rem;">{{ item.product_name }}</div>
+                                    <code style="font-size: 0.72rem; color: var(--text-muted);">{{ item.product_sku }}</code>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ item.unit_price | currency }}</td>
+                        <td><strong>{{ item.quantity }}</strong></td>
+                        <td><strong>{{ item.subtotal | currency }}</strong></td>
+                        <td>
+                            <span style="color: var(--success); font-weight: 600;">+{{ item.profit | currency }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Financial Breakdown -->
+        <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+            <div style="width: 280px; font-size: 0.9rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                    <span style="color: var(--text-secondary);">Subtotal:</span>
+                    <span>{{ order.total_amount | currency }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                    <span style="color: var(--text-secondary);">Snapshotted Cost:</span>
+                    <span>{{ order.total_cost | currency }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; color: var(--success); font-weight: 600;">
+                    <span>Gross Profit:</span>
+                    <span>+{{ order.profit | currency }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding-top: 0.6rem; border-top: 2px solid var(--border-color); font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">
+                    <span>Total Amount:</span>
+                    <span>{{ order.total_amount | currency }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Lifecycle & Status Workflow -->
+        <div style="margin-top: 1.75rem; padding: 1.25rem; background-color: var(--border-subtle); border-radius: var(--radius-md);">
+            <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem;">
+                <i class="fa-solid fa-arrows-rotate"></i> Order Status Workflow
+            </h4>
+
+            {% if order.status != 'Cancelled' %}
+            <form action="{{ url_for('orders.update_status', order_id=order.id) }}" method="POST" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <label for="new_status" style="font-size: 0.85rem; font-weight: 600;">Update Status:</label>
+                <select id="new_status" name="status" class="form-select" style="width: auto;">
+                    <option value="Pending" {{ 'selected' if order.status == 'Pending' else '' }}>Pending</option>
+                    <option value="Confirmed" {{ 'selected' if order.status == 'Confirmed' else '' }}>Confirmed</option>
+                    <option value="Shipped" {{ 'selected' if order.status == 'Shipped' else '' }}>Shipped</option>
+                    <option value="Delivered" {{ 'selected' if order.status == 'Delivered' else '' }}>Delivered</option>
+                </select>
+
+                <button type="submit" class="btn btn-primary">Update Status</button>
+
+                <!-- Cancel Order Action -->
+                <button type="submit" formaction="{{ url_for('orders.cancel', order_id=order.id) }}" class="btn btn-outline-danger" 
+                        onclick="return confirm('Are you sure you want to cancel this order? This will restore stock for all items and record a return restock movement.');">
+                    <i class="fa-solid fa-ban"></i> Cancel Order & Restore Stock
+                </button>
+            </form>
+            {% else %}
+            <div style="color: var(--danger); font-size: 0.88rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <strong>This order was Cancelled.</strong> 
+                Inventory was restored to stock (restored flag: {{ order.stock_restored }}). Cancelled orders are immutable.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

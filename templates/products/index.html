@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block page_title %}Product Catalog Management{% endblock %}
+
+{% block content %}
+<!-- Filter & Action Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('products.index') }}" class="filter-group" style="flex: 1;">
+        <div class="search-input-wrapper">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" name="search" class="form-control" placeholder="Search by name, SKU..." value="{{ search }}">
+        </div>
+
+        <select name="category_id" class="form-select" style="width: auto;">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {{ 'selected' if selected_category == cat.id else '' }}>{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="stock_status" class="form-select" style="width: auto;">
+            <option value="">All Stock Levels</option>
+            <option value="in_stock" {{ 'selected' if stock_status == 'in_stock' else '' }}>In Stock</option>
+            <option value="low_stock" {{ 'selected' if stock_status == 'low_stock' else '' }}>Low Stock</option>
+            <option value="out_of_stock" {{ 'selected' if stock_status == 'out_of_stock' else '' }}>Out of Stock</option>
+        </select>
+
+        <select name="sort_by" class="form-select" style="width: auto;">
+            <option value="name" {{ 'selected' if sort_by == 'name' else '' }}>Sort: Name</option>
+            <option value="price" {{ 'selected' if sort_by == 'price' else '' }}>Sort: Price</option>
+            <option value="stock" {{ 'selected' if sort_by == 'stock' else '' }}>Sort: Stock</option>
+            <option value="sku" {{ 'selected' if sort_by == 'sku' else '' }}>Sort: SKU</option>
+        </select>
+
+        <select name="sort_order" class="form-select" style="width: auto;">
+            <option value="asc" {{ 'selected' if sort_order == 'asc' else '' }}>Ascending</option>
+            <option value="desc" {{ 'selected' if sort_order == 'desc' else '' }}>Descending</option>
+        </select>
+
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or selected_category or stock_status %}
+        <a href="{{ url_for('products.index') }}" class="btn btn-secondary" title="Clear Filters">Clear</a>
+        {% endif %}
+    </form>
+
+    <div>
+        <a href="{{ url_for('products.new') }}" class="btn btn-primary">
+            <i class="fa-solid fa-plus"></i>
+            <span>Add New Product</span>
+        </a>
+    </div>
+</div>
+
+<!-- Products Table Card -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Cost Price</th>
+                    <th>Selling Price</th>
+                    <th>Unit Profit</th>
+                    <th>Stock Level</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in products %}
+                <tr>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.85rem;">
+                            <img src="{{ p.image_url or 'https://via.placeholder.com/60?text=Item' }}" 
+                                 alt="{{ p.name }}" 
+                                 style="width: 44px; height: 44px; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid var(--border-color);"
+                                 onerror="this.src='https://via.placeholder.com/44?text=Product';">
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">{{ p.name }}</div>
+                                <code style="font-size: 0.75rem; color: var(--text-muted);">{{ p.sku }}</code>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ p.category_name }}</td>
+                    <td>{{ p.cost_price | currency }}</td>
+                    <td><strong>{{ p.selling_price | currency }}</strong></td>
+                    <td>
+                        <div style="font-weight: 600; color: var(--success);">+{{ p.unit_profit | currency }}</div>
+                        <span style="font-size: 0.72rem; color: var(--text-muted);">{{ p.profit_margin_percent }}% margin</span>
+                    </td>
+                    <td>
+                        <strong>{{ p.stock_quantity }}</strong>
+                        <span style="font-size: 0.72rem; color: var(--text-muted);">(reorder: {{ p.reorder_level }})</span>
+                    </td>
+                    <td>
+                        <span class="badge {{ 'badge-danger' if p.stock_status == 'out_of_stock' else 'badge-warning' if p.stock_status == 'low_stock' else 'badge-success' }}">
+                            {{ p.stock_status.replace('_', ' ') }}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; gap: 0.4rem;">
+                            <a href="{{ url_for('products.edit', product_id=p.id) }}" class="btn btn-sm btn-secondary" title="Edit Product">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </a>
+                            <form action="{{ url_for('products.delete', product_id=p.id) }}" method="POST" style="display: inline;" data-confirm="Are you sure you want to delete '{{ p.name }}'? (If historical orders exist, deletion will be safely rejected).">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Product">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-box-open"></i>
+                            <h3>No Products Found</h3>
+                            <p>No products match the selected search or filter criteria.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.total_pages > 1 %}
+    <div class="pagination-wrapper">
+        <div>
+            Showing page {{ pagination.page }} of {{ pagination.total_pages }} ({{ pagination.total_count }} total products)
+        </div>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('products.index', page=pagination.page-1, search=search, category_id=selected_category, stock_status=stock_status, sort_by=sort_by, sort_order=sort_order) }}" class="btn btn-sm btn-secondary">
+                &larr; Previous
+            </a>
+            {% endif %}
+            <span style="padding: 0 0.5rem; font-weight: 600;">{{ pagination.page }}</span>
+            {% if pagination.has_next %}
+            <a href="{{ url_for('products.index', page=pagination.page+1, search=search, category_id=selected_category, stock_status=stock_status, sort_by=sort_by, sort_order=sort_order) }}" class="btn btn-sm btn-secondary">
+                Next &rarr;
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Online Store Management & Data Analytics{% endblock %}</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons 6.5 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js 4.4 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Backdrop for Mobile -->
+        <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+        <!-- Sidebar Navigation -->
+        {% if admin_user %}
+        <aside class="sidebar" id="app-sidebar">
+            <div class="sidebar-header">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>SmartStore</h1>
+                    <span>Analytics System</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <span class="nav-section-title">Core Management</span>
+                <a href="{{ url_for('dashboard.index') }}" class="nav-item {{ 'active' if request.endpoint == 'dashboard.index' else '' }}">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('orders.index') }}" class="nav-item {{ 'active' if 'orders' in request.endpoint else '' }}">
+                    <i class="fa-solid fa-bag-shopping"></i>
+                    <span>Orders</span>
+                </a>
+                <a href="{{ url_for('products.index') }}" class="nav-item {{ 'active' if 'products' in request.endpoint else '' }}">
+                    <i class="fa-solid fa-box-archive"></i>
+                    <span>Products</span>
+                </a>
+                <a href="{{ url_for('categories.index') }}" class="nav-item {{ 'active' if 'categories' in request.endpoint else '' }}">
+                    <i class="fa-solid fa-tags"></i>
+                    <span>Categories</span>
+                </a>
+                <a href="{{ url_for('customers.index') }}" class="nav-item {{ 'active' if 'customers' in request.endpoint else '' }}">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Customers</span>
+                </a>
+                <a href="{{ url_for('inventory.index') }}" class="nav-item {{ 'active' if 'inventory' in request.endpoint else '' }}">
+                    <i class="fa-solid fa-warehouse"></i>
+                    <span>Inventory</span>
+                </a>
+
+                <span class="nav-section-title">Insights & Reports</span>
+                <a href="{{ url_for('analytics.index') }}" class="nav-item {{ 'active' if 'analytics' in request.endpoint else '' }}">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="{{ url_for('reports.index') }}" class="nav-item {{ 'active' if 'reports' in request.endpoint else '' }}">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>Reports & Export</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-snippet">
+                    <div class="user-avatar">
+                        {{ admin_user.name[0] }}
+                    </div>
+                    <div class="user-meta">
+                        <div class="name">{{ admin_user.name }}</div>
+                        <div class="role">{{ admin_user.role }}</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        {% endif %}
+
+        <!-- Main Content Area -->
+        <div class="main-wrapper">
+            <!-- Topbar Header -->
+            {% if admin_user %}
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Toggle Navigation">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="page-title">
+                        <h2>{% block page_title %}Dashboard Overview{% endblock %}</h2>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <!-- Low Stock Notification Icon -->
+                    <a href="{{ url_for('inventory.index', status='low_stock') }}" class="icon-btn" title="Low Stock Alerts">
+                        <i class="fa-regular fa-bell"></i>
+                        {% if low_stock_notification_count > 0 %}
+                        <span class="badge-counter">{{ low_stock_notification_count }}</span>
+                        {% endif %}
+                    </a>
+
+                    <!-- Light / Dark Mode Toggle -->
+                    <button class="icon-btn" id="theme-toggle-btn" title="Toggle Light/Dark Theme">
+                        <i class="fa-solid fa-moon" id="theme-toggle-icon"></i>
+                    </button>
+
+                    <!-- Admin Profile & Sign Out -->
+                    <a href="{{ url_for('auth.logout') }}" class="btn-signout" title="Sign Out">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </header>
+            {% endif %}
+
+            <!-- Flash Toast Alerts -->
+            <div class="toast-container" id="toast-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="toast toast-{{ category }}">
+                                <i class="fa-solid {{ 'fa-circle-check text-success' if category == 'success' else 'fa-circle-exclamation text-danger' if category == 'danger' else 'fa-triangle-exclamation text-warning' if category == 'warning' else 'fa-circle-info text-info' }}"></i>
+                                <span>{{ message }}</span>
+                                <button class="toast-close">&times;</button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Page Body -->
+            <main class="page-content">
+                {% if error_title %}
+                <div class="card empty-state">
+                    <i class="fa-solid fa-triangle-exclamation text-danger"></i>
+                    <h3>{{ error_title }}</h3>
+                    <p>{{ error_message }}</p>
+                    <div style="margin-top: 1.5rem;">
+                        <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Return to Dashboard</a>
+                    </div>
+                </div>
+                {% else %}
+                {% block content %}{% endblock %}
+                {% endif %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Global App JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

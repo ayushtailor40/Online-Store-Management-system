@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block page_title %}Store Analytics Dashboard{% endblock %}
+
+{% block content %}
+<!-- Top Filter Bar -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);"><i class="fa-solid fa-calendar-days"></i> Period:</span>
+        <button class="btn btn-sm btn-secondary btn-filter-preset active" data-preset="all">All Time</button>
+        <button class="btn btn-sm btn-secondary btn-filter-preset" data-preset="7d">7 Days</button>
+        <button class="btn btn-sm btn-secondary btn-filter-preset" data-preset="30d">30 Days</button>
+        <button class="btn btn-sm btn-secondary btn-filter-preset" data-preset="90d">90 Days</button>
+        <button class="btn btn-sm btn-secondary btn-filter-preset" data-preset="ytd">YTD</button>
+        <button class="btn btn-sm btn-secondary btn-filter-preset" data-preset="1y">1 Year</button>
+        <button class="btn btn-sm btn-secondary btn-filter-preset" data-preset="custom">Custom</button>
+    </div>
+
+    <div class="filter-group">
+        <label for="dashboard-category-filter" style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);">
+            <i class="fa-solid fa-filter"></i> Category:
+        </label>
+        <select id="dashboard-category-filter" class="form-select" style="width: auto; padding: 0.35rem 0.75rem; font-size: 0.85rem;">
+            <option value="all">All Categories</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- Custom Date Inputs (Hidden by default, shown when 'Custom' preset clicked) -->
+<div id="custom-date-range-container" class="filter-bar" style="display: none; margin-top: -0.75rem;">
+    <div class="filter-group">
+        <label class="form-label" style="margin: 0;">From:</label>
+        <input type="date" id="custom-start-date" class="form-control" style="width: auto;">
+        <label class="form-label" style="margin: 0;">To:</label>
+        <input type="date" id="custom-end-date" class="form-control" style="width: auto;">
+        <button id="btn-apply-custom-date" class="btn btn-sm btn-primary">Apply Range</button>
+    </div>
+</div>
+
+<!-- 6 KPI Metric Cards -->
+<div class="kpi-grid">
+    <!-- 1. Total Revenue -->
+    <div class="kpi-card" style="--kpi-accent: #3b82f6; --kpi-bg: var(--primary-light);">
+        <div class="kpi-top">
+            <span class="kpi-label">Total Revenue</span>
+            <div class="kpi-icon"><i class="fa-solid fa-dollar-sign"></i></div>
+        </div>
+        <div class="kpi-value" id="kpi-revenue">{{ kpis.total_revenue | currency }}</div>
+        <div class="kpi-footer">
+            <span id="kpi-growth" class="trend-badge {{ 'trend-up' if kpis.sales_growth_pct >= 0 else 'trend-down' }}">
+                <i class="fa-solid fa-arrow-{{ 'up' if kpis.sales_growth_pct >= 0 else 'down' }}"></i> {{ kpis.sales_growth_pct | abs }}%
+            </span>
+            <span>vs previous period</span>
+        </div>
+    </div>
+
+    <!-- 2. Total Profit -->
+    <div class="kpi-card" style="--kpi-accent: #10b981; --kpi-bg: var(--success-light);">
+        <div class="kpi-top">
+            <span class="kpi-label">Gross Profit</span>
+            <div class="kpi-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+        </div>
+        <div class="kpi-value" id="kpi-profit" style="color: var(--success);">{{ kpis.total_profit | currency }}</div>
+        <div class="kpi-footer">
+            <span>Revenue minus inventory costs</span>
+        </div>
+    </div>
+
+    <!-- 3. Total Orders -->
+    <div class="kpi-card" style="--kpi-accent: #6366f1; --kpi-bg: var(--info-light);">
+        <div class="kpi-top">
+            <span class="kpi-label">Total Orders</span>
+            <div class="kpi-icon"><i class="fa-solid fa-bag-shopping"></i></div>
+        </div>
+        <div class="kpi-value" id="kpi-orders">{{ kpis.total_orders }}</div>
+        <div class="kpi-footer">
+            <span>Historical non-cancelled orders</span>
+        </div>
+    </div>
+
+    <!-- 4. Total Customers -->
+    <div class="kpi-card" style="--kpi-accent: #06b6d4; --kpi-bg: #ecfeff;">
+        <div class="kpi-top">
+            <span class="kpi-label">Total Customers</span>
+            <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+        </div>
+        <div class="kpi-value" id="kpi-customers">{{ kpis.total_customers }}</div>
+        <div class="kpi-footer">
+            <span>Registered customer base</span>
+        </div>
+    </div>
+
+    <!-- 5. Total Products -->
+    <div class="kpi-card" style="--kpi-accent: #f59e0b; --kpi-bg: var(--warning-light);">
+        <div class="kpi-top">
+            <span class="kpi-label">Active Products</span>
+            <div class="kpi-icon"><i class="fa-solid fa-box-archive"></i></div>
+        </div>
+        <div class="kpi-value" id="kpi-products">{{ kpis.total_products }}</div>
+        <div class="kpi-footer">
+            <span>Catalog items available</span>
+        </div>
+    </div>
+
+    <!-- 6. Low-Stock Products -->
+    <div class="kpi-card" style="--kpi-accent: #ef4444; --kpi-bg: var(--danger-light);">
+        <div class="kpi-top">
+            <span class="kpi-label">Low Stock Alerts</span>
+            <div class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        </div>
+        <div class="kpi-value" id="kpi-low-stock" style="color: var(--danger);">{{ kpis.low_stock_products }}</div>
+        <div class="kpi-footer">
+            <a href="{{ url_for('inventory.index', status='low_stock') }}" style="color: var(--danger); font-weight: 600;">
+                Review stock levels &rarr;
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section 1 -->
+<div class="charts-grid">
+    <!-- Chart 1: Monthly Sales Trend (Line Chart) -->
+    <div class="card chart-card-col-8">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-chart-line"></i> Monthly Sales & Profit Trend
+            </h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-monthly-trend"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 2: Order Status Distribution (Doughnut Chart) -->
+    <div class="card chart-card-col-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-chart-pie"></i> Order Status Distribution
+            </h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-order-status"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section 2 -->
+<div class="charts-grid">
+    <!-- Chart 3: Revenue by Category (Doughnut Chart) -->
+    <div class="card chart-card-col-4">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-layer-group"></i> Revenue by Category
+            </h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-category-revenue"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 4: Top 10 Best-Selling Products (Horizontal Bar Chart) -->
+    <div class="card chart-card-col-8">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-ranking-star"></i> Top 10 Best-Selling Products by Revenue
+            </h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-top-products"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Chart 5: Profit by Product (Bar Chart) -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fa-solid fa-coins"></i> Gross Profit by Product
+        </h3>
+    </div>
+    <div class="chart-container">
+        <canvas id="chart-profit-products"></canvas>
+    </div>
+</div>
+
+<!-- Bottom Section: Recent Orders & Low Stock Alerts -->
+<div class="charts-grid">
+    <!-- Recent Orders Table -->
+    <div class="card chart-card-col-8">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-clock-rotate-left"></i> Recent Customer Orders
+            </h3>
+            <a href="{{ url_for('orders.index') }}" class="btn btn-sm btn-secondary">View All Orders</a>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Payment</th>
+                        <th>Total</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ord in recent_orders %}
+                    <tr>
+                        <td><strong>{{ ord.order_number }}</strong></td>
+                        <td>{{ ord.customer_name }}</td>
+                        <td>{{ ord.order_date | date_format }}</td>
+                        <td>
+                            <span class="badge {{ 'badge-success' if ord.status == 'Delivered' else 'badge-info' if ord.status in ('Confirmed', 'Shipped') else 'badge-danger' if ord.status == 'Cancelled' else 'badge-warning' }}">
+                                {{ ord.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {{ 'badge-success' if ord.payment_status == 'Paid' else 'badge-danger' if ord.payment_status == 'Refunded' else 'badge-warning' }}">
+                                {{ ord.payment_status }}
+                            </span>
+                        </td>
+                        <td><strong>{{ ord.total_amount | currency }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('orders.details', order_id=ord.id) }}" class="btn btn-sm btn-secondary" title="View Order">
+                                <i class="fa-regular fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-muted" style="text-align: center; padding: 2rem;">No orders found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Low Stock Alerts Panel -->
+    <div class="card chart-card-col-4">
+        <div class="card-header">
+            <h3 class="card-title" style="color: var(--danger);">
+                <i class="fa-solid fa-triangle-exclamation"></i> Low Stock Alerts
+            </h3>
+            <a href="{{ url_for('inventory.index', status='low_stock') }}" class="btn btn-sm btn-secondary">Manage</a>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Stock</th>
+                        <th>Reorder</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in low_stock %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600; font-size: 0.85rem;">{{ p.name }}</div>
+                            <span style="font-size: 0.72rem; color: var(--text-muted);">{{ p.sku }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {{ 'badge-danger' if p.stock_quantity == 0 else 'badge-warning' }}">
+                                {{ p.stock_quantity }} units
+                            </span>
+                        </td>
+                        <td>{{ p.reorder_level }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-muted" style="text-align: center; padding: 2rem;">All inventory levels are healthy!</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

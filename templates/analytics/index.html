@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block page_title %}Advanced Data Analytics & Insights{% endblock %}
+
+{% block content %}
+<!-- Top Filter Bar -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);"><i class="fa-solid fa-clock"></i> Date Range:</span>
+        <a href="{{ url_for('analytics.index', preset='all') }}" class="btn btn-sm {{ 'btn-primary' if preset == 'all' else 'btn-secondary' }}">All Time</a>
+        <a href="{{ url_for('analytics.index', preset='30d') }}" class="btn btn-sm {{ 'btn-primary' if preset == '30d' else 'btn-secondary' }}">Last 30 Days</a>
+        <a href="{{ url_for('analytics.index', preset='90d') }}" class="btn btn-sm {{ 'btn-primary' if preset == '90d' else 'btn-secondary' }}">Last 90 Days</a>
+        <a href="{{ url_for('analytics.index', preset='ytd') }}" class="btn btn-sm {{ 'btn-primary' if preset == 'ytd' else 'btn-secondary' }}">Year to Date</a>
+        <a href="{{ url_for('analytics.index', preset='1y') }}" class="btn btn-sm {{ 'btn-primary' if preset == '1y' else 'btn-secondary' }}">1 Year</a>
+    </div>
+
+    <form method="GET" action="{{ url_for('analytics.index') }}" class="filter-group">
+        <input type="hidden" name="preset" value="custom">
+        <input type="date" name="start_date" class="form-control" style="width: auto;" value="{{ start_date or '' }}" required>
+        <input type="date" name="end_date" class="form-control" style="width: auto;" value="{{ end_date or '' }}" required>
+        <button type="submit" class="btn btn-sm btn-secondary">Apply Custom</button>
+    </form>
+</div>
+
+<!-- 4 Analytics Executive KPI Cards -->
+<div class="kpi-grid">
+    <div class="kpi-card" style="--kpi-accent: #3b82f6;">
+        <div class="kpi-top">
+            <span class="kpi-label">Gross Revenue (Period)</span>
+            <div class="kpi-icon"><i class="fa-solid fa-sack-dollar"></i></div>
+        </div>
+        <div class="kpi-value">{{ analytics.sales_summary.total_revenue | currency }}</div>
+        <div class="kpi-footer">
+            <span>{{ analytics.sales_summary.total_orders }} completed/active orders</span>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-accent: #10b981;">
+        <div class="kpi-top">
+            <span class="kpi-label">Gross Margin / Profit</span>
+            <div class="kpi-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+        </div>
+        <div class="kpi-value" style="color: var(--success);">{{ analytics.sales_summary.total_profit | currency }}</div>
+        <div class="kpi-footer">
+            <span>Excludes all cancelled & refunded orders</span>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-accent: #6366f1;">
+        <div class="kpi-top">
+            <span class="kpi-label">Average Order Value (AOV)</span>
+            <div class="kpi-icon"><i class="fa-solid fa-receipt"></i></div>
+        </div>
+        <div class="kpi-value" style="color: var(--info);">{{ analytics.sales_summary.average_order_value | currency }}</div>
+        <div class="kpi-footer">
+            <span>Revenue divided by valid orders count</span>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-accent: #8b5cf6;">
+        <div class="kpi-top">
+            <span class="kpi-label">Repeat Customer Rate</span>
+            <div class="kpi-icon"><i class="fa-solid fa-users-viewfinder"></i></div>
+        </div>
+        <div class="kpi-value">{{ analytics.customer_metrics.repeat_customers }} <span style="font-size: 1rem; color: var(--text-muted); font-weight: 500;">/ {{ analytics.customer_metrics.total_registered }}</span></div>
+        <div class="kpi-footer">
+            <span>{{ analytics.customer_metrics.avg_orders_per_customer }} avg orders per customer</span>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Charts Section -->
+<div class="charts-grid">
+    <!-- Chart: Monthly Revenue vs Profit Comparison -->
+    <div class="card chart-card-col-8">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-chart-column"></i> Revenue vs Gross Profit Comparison</h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="analytics-sales-trend-chart"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart: Category Revenue Share -->
+    <div class="card chart-card-col-4">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-pie-chart"></i> Category Revenue Breakdown</h3>
+        </div>
+        <div class="chart-container">
+            <canvas id="analytics-category-chart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Analytics Sections: Slow Moving Products & Daily Sales -->
+<div class="charts-grid">
+    <!-- Slow-Moving / Zero Sales Alert Table -->
+    <div class="card chart-card-col-6">
+        <div class="card-header">
+            <h3 class="card-title" style="color: var(--warning);">
+                <i class="fa-solid fa-hourglass-half"></i> Slow-Moving Catalog Items (Lowest Units Sold)
+            </h3>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Product & Category</th>
+                        <th>Selling Price</th>
+                        <th>Stock Held</th>
+                        <th>Units Sold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in analytics.slow_moving %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600;">{{ p.name }}</div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">{{ p.category_name }} &bull; {{ p.sku }}</span>
+                        </td>
+                        <td>{{ p.selling_price | currency }}</td>
+                        <td><strong>{{ p.stock_quantity }} units</strong></td>
+                        <td>
+                            <span class="badge {{ 'badge-danger' if p.total_units_sold == 0 else 'badge-warning' }}">
+                                {{ p.total_units_sold }} sold
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Daily Sales Activity -->
+    <div class="card chart-card-col-6">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-calendar-check"></i> Recent Daily Sales Volume</h3>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Order Volume</th>
+                        <th>Daily Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in analytics.daily_sales %}
+                    <tr>
+                        <td><strong>{{ d.order_day | date_format }}</strong></td>
+                        <td>{{ d.order_count }} orders</td>
+                        <td><strong style="color: var(--primary);">{{ d.daily_revenue | currency }}</strong></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-muted" style="text-align: center; padding: 1.5rem;">No sales activity in this timeframe.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Warehouse & Fulfillment Health Summary -->
+<div class="charts-grid">
+    <div class="card chart-card-col-6">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-truck-ramp-box"></i> Order Fulfillment Conversion</h3>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-around; padding: 1.5rem 0;">
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: 800; color: var(--success);">{{ analytics.order_status_summary.delivered_count }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Delivered Orders</div>
+            </div>
+            <div style="height: 50px; width: 1px; background: var(--border-color);"></div>
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: 800; color: var(--info);">{{ analytics.order_status_summary.in_progress_count }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">In Progress</div>
+            </div>
+            <div style="height: 50px; width: 1px; background: var(--border-color);"></div>
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: 800; color: var(--danger);">{{ analytics.order_status_summary.cancelled_count }}</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Cancelled & Restocked</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card chart-card-col-6">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-boxes-packing"></i> Capital Allocation & Inventory Asset</h3>
+        </div>
+        <div style="padding: 1.25rem 0.5rem; display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.95rem;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
+                <span style="color: var(--text-secondary);">Total Capital Tied in Stock (Cost):</span>
+                <strong>{{ analytics.inventory_metrics.total_inventory_cost_value | currency }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
+                <span style="color: var(--text-secondary);">Projected Retail Valuation:</span>
+                <strong style="color: var(--primary);">{{ analytics.inventory_metrics.total_inventory_retail_value | currency }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-secondary);">Stockout SKUs:</span>
+                <span class="badge badge-danger">{{ analytics.inventory_metrics.out_of_stock_count }} items</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+{% endblock %}

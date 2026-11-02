@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block page_title %}Customer Profile: {{ customer.name }}{% endblock %}
+
+{% block content %}
+<!-- Header Cards -->
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+    <div class="kpi-card" style="--kpi-accent: #3b82f6;">
+        <div class="kpi-top">
+            <span class="kpi-label">Lifetime Spend (LTV)</span>
+            <div class="kpi-icon"><i class="fa-solid fa-wallet"></i></div>
+        </div>
+        <div class="kpi-value" style="color: var(--primary);">{{ customer.total_spent | currency }}</div>
+        <div class="kpi-footer">
+            <span>Excluding cancelled orders</span>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-accent: #10b981;">
+        <div class="kpi-top">
+            <span class="kpi-label">Total Orders</span>
+            <div class="kpi-icon"><i class="fa-solid fa-bag-shopping"></i></div>
+        </div>
+        <div class="kpi-value">{{ customer.total_orders }}</div>
+        <div class="kpi-footer">
+            {% if customer.is_repeat == 1 %}
+            <span class="badge badge-success"><i class="fa-solid fa-repeat"></i> Repeat Buyer</span>
+            {% else %}
+            <span class="badge badge-neutral">Single Purchase</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="kpi-card" style="--kpi-accent: #6366f1;">
+        <div class="kpi-top">
+            <span class="kpi-label">Customer Since</span>
+            <div class="kpi-icon"><i class="fa-solid fa-calendar-check"></i></div>
+        </div>
+        <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0.5rem 0;">
+            {{ customer.created_at | date_format }}
+        </div>
+        <div class="kpi-footer">
+            <span>{{ customer.city }}, {{ customer.state or '' }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="charts-grid">
+    <!-- Profile Info Card -->
+    <div class="card chart-card-col-4">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-address-card"></i> Contact Information</h3>
+            <a href="{{ url_for('customers.edit', customer_id=customer.id) }}" class="btn btn-sm btn-secondary">
+                <i class="fa-solid fa-pen"></i> Edit
+            </a>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.9rem;">
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Email:</span>
+                <div style="font-weight: 600;">{{ customer.email }}</div>
+            </div>
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Phone:</span>
+                <div style="font-weight: 600;">{{ customer.phone or 'Not provided' }}</div>
+            </div>
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Street Address:</span>
+                <div>{{ customer.address or 'Not provided' }}</div>
+            </div>
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">City, State, Postal:</span>
+                <div>{{ customer.city }}, {{ customer.state or '' }} {{ customer.postal_code or '' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order History Card -->
+    <div class="card chart-card-col-8">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-clock-rotate-left"></i> Order History ({{ orders | length }})
+            </h3>
+            <a href="{{ url_for('orders.new') }}" class="btn btn-sm btn-primary">
+                <i class="fa-solid fa-plus"></i> New Order
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Items</th>
+                        <th>Order Total</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in orders %}
+                    <tr>
+                        <td><strong>{{ o.order_number }}</strong></td>
+                        <td>{{ o.order_date | date_format }}</td>
+                        <td>
+                            <span class="badge {{ 'badge-success' if o.status == 'Delivered' else 'badge-info' if o.status in ('Confirmed', 'Shipped') else 'badge-danger' if o.status == 'Cancelled' else 'badge-warning' }}">
+                                {{ o.status }}
+                            </span>
+                        </td>
+                        <td>{{ o.item_count }} items</td>
+                        <td><strong>{{ o.total_amount | currency }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('orders.details', order_id=o.id) }}" class="btn btn-sm btn-secondary">
+                                View Details &rarr;
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-muted" style="text-align: center; padding: 2rem;">No orders placed yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

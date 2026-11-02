@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block page_title %}Reports & CSV Data Export Center{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+    <p style="color: var(--text-secondary); font-size: 0.95rem;">
+        Generate and download structured CSV reports from your live SQL database. All reports feature sanitized data output compatible with Microsoft Excel, Google Sheets, and data science notebooks.
+    </p>
+</div>
+
+<div class="charts-grid">
+    <!-- Card 1: Sales Performance Report -->
+    <div class="card chart-card-col-6">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-file-invoice-dollar" style="color: #3b82f6;"></i> Sales & Revenue Export
+            </h3>
+            <span class="badge badge-info">Orders & Finance</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+            Export order transactions, order items count, snapshotted revenues, total inventory costs, net gross profit, and payment gateway methods.
+        </p>
+        <form action="{{ url_for('reports.export_sales') }}" method="GET">
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" style="font-size: 0.8rem;">From Date:</label>
+                    <input type="date" name="start_date" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size: 0.8rem;">To Date:</label>
+                    <input type="date" name="end_date" class="form-control">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem;">Filter by Order Status:</label>
+                <select name="status" class="form-select">
+                    <option value="all">All Statuses (including Delivered, Shipped, Cancelled)</option>
+                    <option value="Delivered">Delivered Only</option>
+                    <option value="Confirmed">Confirmed Only</option>
+                    <option value="Shipped">Shipped Only</option>
+                    <option value="Cancelled">Cancelled Only</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                <i class="fa-solid fa-download"></i> Download Sales Report (CSV)
+            </button>
+        </form>
+    </div>
+
+    <!-- Card 2: Product Performance & Profitability Report -->
+    <div class="card chart-card-col-6">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-boxes-stacked" style="color: #10b981;"></i> Product Profitability Report
+            </h3>
+            <span class="badge badge-success">Inventory & Margin</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+            Complete SKU performance report with unit cost, selling price, unit margins, lifetime units sold, and cumulative gross profit generated.
+        </p>
+        <form action="{{ url_for('reports.export_products') }}" method="GET">
+            <div class="form-group" style="margin-bottom: 1.75rem;">
+                <label class="form-label" style="font-size: 0.8rem;">Category Filter:</label>
+                <select name="category_id" class="form-select">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="height: 48px;"></div>
+            <button type="submit" class="btn btn-success" style="width: 100%;">
+                <i class="fa-solid fa-download"></i> Download Product Report (CSV)
+            </button>
+        </form>
+    </div>
+
+    <!-- Card 3: Customer Spending & Retention Report -->
+    <div class="card chart-card-col-6">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-users-line" style="color: #8b5cf6;"></i> Customer Lifetime Value (LTV)
+            </h3>
+            <span class="badge badge-neutral">CRM</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+            Customer profiles, contact details, cities, total order counts, lifetime expenditures, and repeat customer status.
+        </p>
+        <form action="{{ url_for('reports.export_customers') }}" method="GET">
+            <div style="padding: 1rem; background-color: var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 1.25rem; font-size: 0.82rem; color: var(--text-secondary);">
+                <i class="fa-solid fa-circle-info"></i> Exports all registered customers ranked by total spend descending.
+            </div>
+            <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                <i class="fa-solid fa-download"></i> Download Customer Report (CSV)
+            </button>
+        </form>
+    </div>
+
+    <!-- Card 4: Inventory & Low Stock Alerts Report -->
+    <div class="card chart-card-col-6">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fa-solid fa-warehouse" style="color: #f59e0b;"></i> Inventory Valuation & Stockout Report
+            </h3>
+            <span class="badge badge-warning">Stock Health</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+            Warehouse stock inventory list with cost price, retail price, stock quantities, and asset valuations.
+        </p>
+        <form action="{{ url_for('reports.export_inventory') }}" method="GET">
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label class="form-label" style="font-size: 0.8rem;">Inventory Scope:</label>
+                <select name="status" class="form-select">
+                    <option value="">Full Catalog Inventory Valuation</option>
+                    <option value="low_stock">Low-Stock Alert Products Only (&le; Reorder Level)</option>
+                    <option value="out_of_stock">Out-of-Stock SKUs Only (0 stock)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                <i class="fa-solid fa-download"></i> Download Inventory Report (CSV)
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

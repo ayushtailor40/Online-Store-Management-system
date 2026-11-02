@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Smart Online Store Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 40%),
+                        radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.08), transparent 40%),
+                        var(--bg-app);
+        }
+        .login-box {
+            width: 100%;
+            max-width: 420px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 2.25rem;
+            box-shadow: var(--shadow-lg);
+        }
+        .login-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+        .demo-pill {
+            background-color: var(--primary-light);
+            border: 1px solid var(--primary-border);
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.82rem;
+            color: var(--primary-hover);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <div class="login-box">
+            <div class="login-brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 800; line-height: 1.1;">SmartStore</h2>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.5px;">ADMIN ANALYTICS PORTAL</span>
+                </div>
+            </div>
+
+            <!-- Demo helper pill -->
+            <div class="demo-pill">
+                <strong><i class="fa-solid fa-circle-info"></i> Demo Credentials:</strong><br>
+                Username: <code>admin</code> | Password: <code>Admin@123</code>
+            </div>
+
+            <!-- Toast alert -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="toast toast-{{ category }}" style="margin-bottom: 1.25rem; position: static;">
+                            <i class="fa-solid {{ 'fa-circle-check text-success' if category == 'success' else 'fa-circle-exclamation text-danger' if category == 'danger' else 'fa-triangle-exclamation text-warning' if category == 'warning' else 'fa-circle-info text-info' }}"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form action="{{ url_for('auth.login') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <div class="search-input-wrapper">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="Enter admin username" value="admin" required autofocus>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="search-input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="Enter admin password" value="Admin@123" required>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <span>Sign In to Dashboard</span>
+                    </button>
+                </div>
+            </form>
+
+            <div style="margin-top: 1.5rem; text-align: center; font-size: 0.78rem; color: var(--text-muted);">
+                &copy; {{ current_year }} Smart Online Store Management & Data Analytics System
+            </div>
+        </div>
+    </div>
+</body>
+</html>

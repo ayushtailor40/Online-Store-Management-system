@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block page_title %}Product Category Management{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('categories.index') }}" class="filter-group" style="flex: 1;">
+        <div class="search-input-wrapper">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" name="search" class="form-control" placeholder="Search categories..." value="{{ search }}">
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" id="active_only" name="active_only" value="1" {{ 'checked' if active_only else '' }} onchange="this.form.submit()">
+            <label for="active_only" style="font-size: 0.85rem; font-weight: 500; cursor: pointer;">Active Only</label>
+        </div>
+
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if search or active_only %}
+        <a href="{{ url_for('categories.index') }}" class="btn btn-secondary">Clear</a>
+        {% endif %}
+    </form>
+
+    <div>
+        <button class="btn btn-primary" onclick="openModal('add-category-modal')">
+            <i class="fa-solid fa-plus"></i>
+            <span>Add Category</span>
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Category Name</th>
+                    <th>Description</th>
+                    <th>Products Assigned</th>
+                    <th>Status</th>
+                    <th>Created On</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categories %}
+                <tr>
+                    <td><code>#{{ cat.id }}</code></td>
+                    <td><strong>{{ cat.name }}</strong></td>
+                    <td style="color: var(--text-secondary); max-width: 320px;">{{ cat.description or '-' }}</td>
+                    <td>
+                        <span class="badge badge-info">{{ cat.product_count }} products</span>
+                    </td>
+                    <td>
+                        <span class="badge {{ 'badge-success' if cat.is_active == 1 else 'badge-neutral' }}">
+                            {{ 'Active' if cat.is_active == 1 else 'Archived' }}
+                        </span>
+                    </td>
+                    <td>{{ cat.created_at | date_format }}</td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; gap: 0.4rem;">
+                            <button class="btn btn-sm btn-secondary" 
+                                    onclick="openEditCategoryModal('{{ cat.id }}', '{{ cat.name | escape }}', '{{ (cat.description or '') | escape }}', '{{ cat.is_active }}')"
+                                    title="Edit Category">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+
+                            <form action="{{ url_for('categories.delete', category_id=cat.id) }}" method="POST" style="display: inline;" data-confirm="Are you sure you want to delete category '{{ cat.name }}'? (If any products belong to it, deletion is safely blocked).">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Category">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-tags"></i>
+                            <h3>No Categories Found</h3>
+                            <p>No product categories match your query.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Add Category -->
+<div class="modal-overlay" id="add-category-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="card-title"><i class="fa-solid fa-folder-plus"></i> Add New Category</h3>
+            <button class="toast-close" onclick="closeModal('add-category-modal')">&times;</button>
+        </div>
+        <form action="{{ url_for('categories.new') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="add-cat-name">Category Name *</label>
+                    <input type="text" id="add-cat-name" name="name" class="form-control" placeholder="e.g. Smart Wearables" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="add-cat-desc">Description</label>
+                    <textarea id="add-cat-desc" name="description" class="form-control" rows="3" placeholder="Brief category description..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('add-category-modal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Edit Category -->
+<div class="modal-overlay" id="edit-category-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="card-title"><i class="fa-solid fa-pen"></i> Edit Category</h3>
+            <button class="toast-close" onclick="closeModal('edit-category-modal')">&times;</button>
+        </div>
+        <form id="edit-category-form" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="edit-cat-name">Category Name *</label>
+                    <input type="text" id="edit-cat-name" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-cat-desc">Description</label>
+                    <textarea id="edit-cat-desc" name="description" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 0.6rem;">
+                    <input type="checkbox" id="edit-cat-active" name="is_active" value="1">
+                    <label for="edit-cat-active" style="font-size: 0.88rem; font-weight: 500;">Category is active</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('edit-category-modal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openEditCategoryModal(id, name, desc, isActive) {
+        const form = document.getElementById('edit-category-form');
+        form.action = `/categories/${id}/edit`;
+        document.getElementById('edit-cat-name').value = name;
+        document.getElementById('edit-cat-desc').value = desc;
+        document.getElementById('edit-cat-active').checked = (isActive === '1' || isActive === 1);
+        openModal('edit-category-modal');
+    }
+</script>
+{% endblock %}
